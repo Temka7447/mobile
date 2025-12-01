@@ -31,6 +31,7 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+<<<<<<< HEAD
         title: const Text('Delivery App'),
       ),
 
@@ -64,6 +65,35 @@ class _HomePageState extends State<HomePage> {
             label: 'Orders',
           ),
         ],
+=======
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.notifications),
+              onPressed: () {
+                Navigator.pushReplacementNamed(context, '/');
+              },
+            ),
+            
+            IconButton(
+              icon: const Icon(Icons.card_travel),
+              onPressed: () {
+                Navigator.pushReplacementNamed(context, '/');
+              },
+            ),
+          ],
+        ),
+        automaticallyImplyLeading: false, 
+      ),
+
+      body: Column(
+        children: [
+          const SizedBox(height: 20,),
+
+          
+        ]
+>>>>>>> 694666d0c990e8aa1bc7e03192792ea74da0feaa
       ),
     );
   }
