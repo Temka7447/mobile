@@ -25,8 +25,8 @@ class _HomePageState extends State<HomePage> {
     ),
     LoginPage(),
     RegisterPage(),
-    ProfilePage()
-    // OrderPage(),
+    ProfilePage(),
+    OrderPage(),
   ];
 
   @override
@@ -68,6 +68,10 @@ class _HomePageState extends State<HomePage> {
            BottomNavigationBarItem(
             icon: Icon(Icons.person),
             label: 'profile',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.shop),
+            label: 'order',
           ),
         ],
         // title: Row(
