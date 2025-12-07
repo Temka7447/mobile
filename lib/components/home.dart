@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'onboarding.dart';
 import 'login.dart';
 import 'register.dart';
-import 'order.dart';
+// import 'order.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -24,7 +24,7 @@ class _HomePageState extends State<HomePage> {
     ),
     LoginPage(),
     RegisterPage(),
-    OrderPage(),
+    // OrderPage(),
   ];
 
   @override
