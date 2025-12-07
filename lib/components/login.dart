@@ -30,7 +30,7 @@ class LoginPage extends StatelessWidget {
                 const SizedBox(height: 20),
                 TextField(
                   controller: phoneController,
-                  decoration: const InputDecoration(labelText: 'Утас'),
+                  decoration: const InputDecoration(labelText: 'Утасны дугаар'),
                   keyboardType: TextInputType.phone,
                 ),
                 TextField(
@@ -41,7 +41,7 @@ class LoginPage extends StatelessWidget {
                 const SizedBox(height: 20),
                 ElevatedButton(
                     onPressed: () {
-                      Navigator.pushReplacementNamed(context, '/profile');
+                      Navigator.pushReplacementNamed(context, '/home');
                     },
                     style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.orange,
@@ -57,7 +57,7 @@ class LoginPage extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     TextButton(onPressed: () => 
-                    Navigator.pushNamed(context, '/forgotPassword'), 
+                    Navigator.pushNamed(context, '/forgot_password'), 
                     child: const Text('Нууц үг мартсан')),
 
                     TextButton(
