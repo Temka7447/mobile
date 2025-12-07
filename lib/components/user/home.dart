@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'onboarding.dart';
-import 'login.dart';
-import 'register.dart';
-// import 'order.dart';
+import '../login.dart';
+import '../register.dart';
+import 'order.dart';
+import 'profile.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -24,15 +25,16 @@ class _HomePageState extends State<HomePage> {
     ),
     LoginPage(),
     RegisterPage(),
+    ProfilePage()
     // OrderPage(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Delivery App'),
-      ),
+      // appBar: AppBar(
+      //   title: const Text('Delivery App'),
+      // ),
 
       body: pages[currentIndex],
 
@@ -47,9 +49,13 @@ class _HomePageState extends State<HomePage> {
           });
         },
         items: const [
+          // BottomNavigationBarItem(
+          //   icon: Icon(Icons.home),
+          //   label: 'home',
+          // ),
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
-            label: 'Home',
+            label: 'Admin_home',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.add),

@@ -95,8 +95,6 @@ class ProfilePage extends StatelessWidget {
                     ],
                   ),
                 ),
-
-                
               ],
             ),
           ),
