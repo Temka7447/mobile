@@ -12,13 +12,9 @@ class _ProfilePageState extends State<ProfilePage> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController lastNameController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
-  final TextEditingController emailController = TextEditingController();
 
   bool isLoading = true;
   bool isEditing = false;
-
-  String userId = '';
-  String userRole = 'user';
 
   @override
   void initState() {
@@ -31,7 +27,6 @@ class _ProfilePageState extends State<ProfilePage> {
     nameController.dispose();
     lastNameController.dispose();
     phoneController.dispose();
-    emailController.dispose();
     super.dispose();
   }
 
@@ -44,23 +39,15 @@ class _ProfilePageState extends State<ProfilePage> {
     if (!mounted) return;
 
     if (user is Map && user['error'] == null) {
-      // ApiService returns normalized keys: id, name, lastName, phone, email, role
-      userId = (user['id'] ?? '').toString();
-      userRole = (user['role'] ?? 'user').toString();
-
       nameController.text = (user['name'] ?? '').toString();
       lastNameController.text = (user['lastName'] ?? '').toString();
       phoneController.text = (user['phone'] ?? '').toString();
-      emailController.text = (user['email'] ?? '').toString();
     } else {
       final msg = (user is Map && user['error'] != null) ? user['error'].toString() : 'Хэрэглэгчийн мэдээлэл олдсонгүй';
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
       nameController.text = '';
       lastNameController.text = '';
       phoneController.text = '';
-      emailController.text = '';
-      userId = '';
-      userRole = 'user';
     }
 
     if (!mounted) return;
@@ -83,7 +70,6 @@ class _ProfilePageState extends State<ProfilePage> {
       name: nameController.text.trim(),
       lastName: lastNameController.text.trim(),
       phone: phone,
-      email: emailController.text.trim(),
     );
 
     if (!mounted) return;
@@ -108,29 +94,52 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _toggleEdit() {
-    if (isEditing) _loadUserData(); // cancel edits -> revert
+    if (isEditing) {
+      // Cancel edits: restore values
+      _loadUserData();
+    }
     setState(() => isEditing = !isEditing);
   }
 
-  Widget _buildTextField({
+  Widget _displayRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.w600),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              value.isNotEmpty ? value : '-',
+              style: const TextStyle(fontSize: 16),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _editableField({
     required String label,
     required TextEditingController controller,
-    required bool enabled,
-    String hint = '',
     TextInputType keyboardType = TextInputType.text,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: TextField(
         controller: controller,
-        readOnly: !enabled,
-        enabled: enabled,
         keyboardType: keyboardType,
-        decoration: InputDecoration(
-          labelText: label,
-          hintText: hint,
-          border: const OutlineInputBorder(),
-          suffixIcon: enabled ? null : const Icon(Icons.lock_outline),
+        decoration: const InputDecoration(
+          labelText: null,
+          border: OutlineInputBorder(),
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         ),
       ),
     );
@@ -142,15 +151,12 @@ class _ProfilePageState extends State<ProfilePage> {
       backgroundColor: const Color(0xFFFBFADA),
       appBar: AppBar(
         backgroundColor: const Color(0xFFFBFADA),
-        title: Row(
-          children: [
-            IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.orange),
-              onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
-            ),
-            const Text('Хувийн мэдээлэл', style: TextStyle(color: Colors.black)),
-          ],
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.orange),
+          onPressed: () => Navigator.pushReplacementNamed(context, '/home'),
         ),
+        title: const Text('Хувийн мэдээлэл', style: TextStyle(color: Colors.black)),
         actions: [
           if (!isLoading) ...[
             IconButton(
@@ -186,41 +192,14 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  Card(
-                    child: ListTile(
-                      title: Text('Роль: $userRole'),
-                      subtitle: Text('ID: ${userId.isNotEmpty ? userId : "—"}'),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildTextField(
-                    label: 'Овог',
-                    controller: lastNameController,
-                    enabled: isEditing,
-                    hint: lastNameController.text.isEmpty ? 'Овог оруулаагүй' : '',
-                  ),
-                  _buildTextField(
-                    label: 'Нэр',
-                    controller: nameController,
-                    enabled: isEditing,
-                    hint: nameController.text.isEmpty ? 'Нэр оруулаагүй' : '',
-                  ),
-                  _buildTextField(
-                    label: 'Утас',
-                    controller: phoneController,
-                    enabled: isEditing,
-                    keyboardType: TextInputType.phone,
-                    hint: phoneController.text.isEmpty ? 'Утасны дугаар оруулаагүй' : '',
-                  ),
-                  _buildTextField(
-                    label: 'Имэйл',
-                    controller: emailController,
-                    enabled: isEditing,
-                    keyboardType: TextInputType.emailAddress,
-                    hint: emailController.text.isEmpty ? 'Имэйл оруулаагүй' : '',
-                  ),
-                  const SizedBox(height: 12),
-                  if (isEditing)
+
+                  // If editing -> show editable text fields.
+                  // If not editing -> show simple rows (no lock icons, simple plain text).
+                  if (isEditing) ...[
+                    _editableField(label: 'Овог', controller: lastNameController),
+                    _editableField(label: 'Нэр', controller: nameController),
+                    _editableField(label: 'Утас', controller: phoneController, keyboardType: TextInputType.phone),
+                    const SizedBox(height: 12),
                     ElevatedButton(
                       onPressed: isLoading ? null : _saveUserData,
                       style: ElevatedButton.styleFrom(
@@ -237,6 +216,22 @@ class _ProfilePageState extends State<ProfilePage> {
                             )
                           : const Text('Хадгалах'),
                     ),
+                  ] else ...[
+                    // Simple, read-only view without lock icons and without outline.
+                    _displayRow('Овог', lastNameController.text),
+                    _displayRow('Нэр', nameController.text),
+                    _displayRow('Утас', phoneController.text),
+                    const SizedBox(height: 12),
+                    // small hint to inform how to edit
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: _toggleEdit,
+                        icon: const Icon(Icons.edit, color: Colors.orange),
+                        label: const Text('Засах', style: TextStyle(color: Colors.orange)),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

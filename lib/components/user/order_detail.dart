@@ -176,7 +176,6 @@ class _DetailPageState extends State<DetailPage> {
       final qty = entry.value;
       if (idx >= 0 && idx < _products.length && qty > 0) {
         final product = _products[idx];
-        // Ensure we don't add more than available stock
         final toAdd = qty.clamp(0, product.quantity);
         if (toAdd > 0) {
           cart.addItem(product, toAdd);
@@ -214,7 +213,7 @@ class _DetailPageState extends State<DetailPage> {
             children: [
               IconButton(
                 icon: const Icon(Icons.shopping_bag_outlined),
-                onPressed: _goToCheckout, // navigate to checkout page
+                onPressed: _goToCheckout, 
               ),
               if (cart.totalItems > 0)
                 Positioned(

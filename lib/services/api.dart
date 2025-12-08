@@ -122,7 +122,6 @@ class ApiService {
     required String name,
     required String lastName,
     required String phone,
-    required String email,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -139,7 +138,6 @@ class ApiService {
           "name": name,
           "lastName": lastName,
           "phone": phone,
-          "email": email,
         }),
       );
 

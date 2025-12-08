@@ -6,10 +6,20 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+import 'package:mobilebiydaalt/services/cart_service.dart';
 import 'my_orders.dart'; // MyOrdersPage файлтай холбох
 
 class DeliveryPage extends StatefulWidget {
-  const DeliveryPage({super.key});
+  // receive order items and total from CheckoutPage
+  final List<CartItem>? orderItems;
+  final num? orderTotal;
+
+  /// Optional store location passed from CheckoutPage/DetailPage
+  /// expected shape: { 'address': '...', 'lat': 47.9, 'lng': 106.9 }
+  final Map<String, dynamic>? storeLocation;
+
+  const DeliveryPage({super.key, this.orderItems, this.orderTotal, this.storeLocation});
 
   @override
   State<DeliveryPage> createState() => _DeliveryPageState();
@@ -30,6 +40,24 @@ class _DeliveryPageState extends State<DeliveryPage> {
 
   final ImagePicker _picker = ImagePicker();
 
+  @override
+  void initState() {
+    super.initState();
+
+    // If storeLocation provided, prefill pickup address with store.address
+    if (widget.storeLocation != null) {
+      final loc = widget.storeLocation!;
+      final addr = (loc['address'] ?? loc['adress'] ?? '').toString();
+      if (addr.isNotEmpty) pickupController.text = addr;
+    }
+
+    // If orderItems present, prefill quantity as sum for quick view (optional)
+    if (widget.orderItems != null && widget.orderItems!.isNotEmpty) {
+      final totalQty = widget.orderItems!.fold<int>(0, (s, e) => s + e.quantity);
+      quantity = totalQty > 0 ? totalQty : 1;
+    }
+  }
+
   Future<void> pickImage() async {
     final pickedFile = await _picker.pickImage(
       source: ImageSource.camera,
@@ -49,6 +77,20 @@ class _DeliveryPageState extends State<DeliveryPage> {
     }
   }
 
+  List<Map<String, dynamic>> _buildItemsPayload() {
+    final List<Map<String, dynamic>> items = [];
+    final orderItems = widget.orderItems ?? [];
+    for (final ci in orderItems) {
+      items.add({
+        'productId': ci.product.id,
+        'name': ci.product.name,
+        'price': ci.product.price,
+        'quantity': ci.quantity,
+      });
+    }
+    return items;
+  }
+
   Future<void> _submitForm() async {
     String? base64Image;
     if (kIsWeb && webImage != null) {
@@ -57,6 +99,8 @@ class _DeliveryPageState extends State<DeliveryPage> {
       final bytes = await mobileImage!.readAsBytes();
       base64Image = base64Encode(bytes);
     }
+
+    final itemsPayload = _buildItemsPayload();
 
     final data = {
       "pickupAddress": pickupController.text,
@@ -67,40 +111,72 @@ class _DeliveryPageState extends State<DeliveryPage> {
       "fragile": fragile,
       "quantity": quantity,
       "imageBase64": base64Image ?? "",
+      "orderTotal": widget.orderTotal ?? 0,
+      "items": itemsPayload,
+      "storeLocation": widget.storeLocation ?? {},
+      "createdAt": DateTime.now().toIso8601String(),
     };
 
-    print("🚀 SEND DATA: $data");
+    // debug
+    // ignore: avoid_print
+    print("🚀 SEND DELIVERY DATA: $data");
 
-    final response = await http.post(
-      Uri.parse("http://localhost:5000/delivery"),
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode(data),
-    );
-
-    if (response.statusCode == 200) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Амжилттай хадгалагдлаа!")),
+    try {
+      final response = await http.post(
+        Uri.parse("http://localhost:5000/delivery"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(data),
       );
-      pickupController.clear();
-      deliverController.clear();
-      receiverController.clear();
-      phoneController.clear();
-      setState(() {
-        mobileImage = null;
-        webImage = null;
-        weight = "0-5kg";
-        fragile = "Үгүй";
-        quantity = 1;
-      });
-    } else {
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Амжилттай хадгалагдлаа!")),
+        );
+
+        // Optionally clear only ordered items from global cart
+        final cart = CartService.instance;
+        if (widget.orderItems != null) {
+          for (final ci in widget.orderItems!) {
+            cart.removeItem(ci.product.id);
+          }
+        }
+
+        // reset form
+        pickupController.clear();
+        deliverController.clear();
+        receiverController.clear();
+        phoneController.clear();
+        setState(() {
+          mobileImage = null;
+          webImage = null;
+          weight = "0-5kg";
+          fragile = "Үгүй";
+          quantity = 1;
+        });
+
+        // navigate to MyOrders or pop
+        Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const MyOrdersPage()));
+      } else {
+        // debug response
+        // ignore: avoid_print
+        print('Delivery Error ${response.statusCode}: ${response.body}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Алдаа гарлаа.")),
+        );
+      }
+    } catch (e) {
+      // ignore: avoid_print
+      print('Network error: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Алдаа гарлаа.")),
+        SnackBar(content: Text("Сүлжээний алдаа: $e")),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final orderItems = widget.orderItems ?? [];
+    final nf = NumberFormat('#,##0', 'en_US');
     return Scaffold(
       backgroundColor: const Color(0xFFFFF3C9),
       appBar: AppBar(
@@ -127,6 +203,38 @@ class _DeliveryPageState extends State<DeliveryPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Order summary (if items passed)
+                if (orderItems.isNotEmpty) ...[
+                  const Text('Захиалсан бараа', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    height: 120,
+                    child: ListView.separated(
+                      separatorBuilder: (_, __) => const SizedBox(height: 6),
+                      itemCount: orderItems.length,
+                      itemBuilder: (_, i) {
+                        final ci = orderItems[i];
+                        return Row(
+                          children: [
+                            Expanded(child: Text(ci.product.name, style: const TextStyle(fontWeight: FontWeight.w600))),
+                            Text('${ci.quantity} x ${ci.product.price} ₮'),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                  const Divider(),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Нийт дүн:', style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text(nf.format(widget.orderTotal ?? 0), style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
                 // My Orders Button
                 Center(
                   child: ElevatedButton(
@@ -143,13 +251,11 @@ class _DeliveryPageState extends State<DeliveryPage> {
                       padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(26),
-                        
                       ),
                     ),
                     child: const Text(
                       "Миний захиалгууд",
                       style: TextStyle(
-                        
                         fontSize: 18,
                         color: Colors.white,
                         fontWeight: FontWeight.w700,
@@ -158,6 +264,8 @@ class _DeliveryPageState extends State<DeliveryPage> {
                   ),
                 ),
                 const SizedBox(height: 20),
+
+                // rest of the form...
                 _label("Илгээмж авах хаяг"),
                 _inputField(pickupController),
                 _label("Илгээмж хүргэх хаяг"),
@@ -167,11 +275,9 @@ class _DeliveryPageState extends State<DeliveryPage> {
                 _label("Хүлээн авагчийн дугаар"),
                 _inputField(phoneController, keyboard: TextInputType.phone),
                 _label("Барааны хэмжээ (Жин)"),
-                _radioGroup(["0-5kg", "5-15kg", "15kg+"], weight,
-                    (val) => setState(() => weight = val!)),
+                _radioGroup(["0-5kg", "5-15kg", "15kg+"], weight, (val) => setState(() => weight = val!)),
                 _label("Хагарах уу?"),
-                _radioGroup(["Тийм", "Үгүй"], fragile,
-                    (val) => setState(() => fragile = val!)),
+                _radioGroup(["Тийм", "Үгүй"], fragile, (val) => setState(() => fragile = val!)),
                 _label("Тоо ширхэг"),
                 Row(
                   children: [
@@ -235,13 +341,10 @@ class _DeliveryPageState extends State<DeliveryPage> {
                     ),
                     child: const Text(
                       "Хадгалах",
-                      style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700),
+                      style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.w700),
                     ),
                   ),
-                )
+                ),
               ],
             ),
           ),
@@ -262,16 +365,14 @@ class _DeliveryPageState extends State<DeliveryPage> {
         ),
       );
 
-  Widget _inputField(TextEditingController controller,
-      {TextInputType keyboard = TextInputType.text}) {
+  Widget _inputField(TextEditingController controller, {TextInputType keyboard = TextInputType.text}) {
     return TextField(
       controller: controller,
       keyboardType: keyboard,
       decoration: InputDecoration(
         filled: true,
         fillColor: Colors.white,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide.none,
@@ -280,8 +381,7 @@ class _DeliveryPageState extends State<DeliveryPage> {
     );
   }
 
-  Widget _radioGroup(
-      List<String> items, String groupValue, Function(String?) onChanged) {
+  Widget _radioGroup(List<String> items, String groupValue, Function(String?) onChanged) {
     return Column(
       children: items
           .map((item) => Row(

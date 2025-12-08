@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:mobilebiydaalt/models/store.dart';
 import 'package:mobilebiydaalt/services/stores_service.dart';
 import 'order_detail.dart';
+import 'package:mobilebiydaalt/services/cart_service.dart';
+import 'checkout_page.dart';
 
 class OrderPage extends StatefulWidget {
   const OrderPage({super.key});
@@ -14,11 +16,22 @@ class _OrderPageState extends State<OrderPage> {
   List<Store> _stores = [];
   bool _isLoading = true;
 
+  final cart = CartService.instance;
+
   @override
   void initState() {
     super.initState();
     _loadStores();
+    cart.addListener(_onCartChanged);
   }
+
+  @override
+  void dispose() {
+    cart.removeListener(_onCartChanged);
+    super.dispose();
+  }
+
+  void _onCartChanged() => setState(() {});
 
   Future<void> _loadStores() async {
     setState(() => _isLoading = true);
@@ -30,7 +43,6 @@ class _OrderPageState extends State<OrderPage> {
         _isLoading = false;
       });
     } catch (e) {
-      // ignore: avoid_print
       print('Failed to load stores: $e');
       if (!mounted) return;
       setState(() {
@@ -61,7 +73,6 @@ class _OrderPageState extends State<OrderPage> {
       );
     }
 
-    // Relative path on backend — use StoreService.baseUrl
     final url = '${StoreService.baseUrl}/${imagePath}'.replaceAll('//', '/').replaceFirst('http:/', 'http://');
     return Image.network(
       url,
@@ -70,6 +81,14 @@ class _OrderPageState extends State<OrderPage> {
           progress == null ? child : const Center(child: CircularProgressIndicator()),
       errorBuilder: (_, __, ___) => Image.asset(placeholder, fit: BoxFit.cover),
     );
+  }
+
+  void _openCheckout() {
+    if (cart.items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Сагс хоосон байна')));
+      return;
+    }
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CheckoutPage()));
   }
 
   @override
@@ -84,9 +103,34 @@ class _OrderPageState extends State<OrderPage> {
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Icon(Icons.notifications_outlined, size: 30),
-                  Icon(Icons.shopping_bag_outlined, size: 30),
+                children: [
+                  const Icon(Icons.notifications_outlined, size: 30),
+                  // Cart icon with badge and tap to open checkout
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.shopping_bag_outlined, size: 30),
+                        onPressed: _openCheckout,
+                      ),
+                      if (cart.totalItems > 0)
+                        Positioned(
+                          right: 4,
+                          top: 6,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              cart.totalItems.toString(),
+                              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ],
               ),
               const SizedBox(height: 20),
