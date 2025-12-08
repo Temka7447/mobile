@@ -5,6 +5,7 @@ import '../../models/store.dart';
 import 'items.dart';
 import 'profile.dart';
 import 'order.dart';
+import 'deliver.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -51,9 +52,11 @@ class _HomePageState extends State<HomePage> {
       case 0:
         return _shopPage();
       case 1:
-        return ProfilePage();
+        return DeliveryPage();
       case 2:
         return OrderPage();
+      case 3:
+        return ProfilePage();
       default:
         return const Center(child: Text("Page not found"));
     }
@@ -169,12 +172,16 @@ class _HomePageState extends State<HomePage> {
             label: 'home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'profile',
+            icon: Icon(Icons.delivery_dining_outlined),
+            label: 'delivery',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.shop),
             label: 'order',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'profile',
           ),
         ],
       ),
