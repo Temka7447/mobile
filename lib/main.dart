@@ -33,9 +33,6 @@ class MyApp extends StatelessWidget {
         '/forgot_password': (context) => const ForgotPassword(),
         '/admin_home': (context) => const AdminHome(),
         '/order': (context) => const OrderPage(),
-        '/workers': (context) => const WorkersAdmin(),
-        '/order': (context) => const OrderPage(),
-
       },
     );
   }
