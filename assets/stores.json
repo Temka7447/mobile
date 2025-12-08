@@ -3,20 +3,72 @@
     "_id": "s_1",
     "name": "Цэцэгт мэндчилгээ",
     "phone": "99999999",
-    "imagePath": "images/scooter.png",
+    "imagePath": "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=800&q=80",
     "products": [
-      { "_id": "p_1", "name": "Цэнхэр цэцэг", "price": 19000, "imagePath": "images/scooter.png", "quantity": 10 },
-      { "_id": "p_2", "name": "Сарнай", "price": 21000, "imagePath": "images/flower2.png", "quantity": 5 }
+      { "_id": "p_1", "name": "Цэнхэр цэцэг", "price": 19000, "imagePath": "https://images.unsplash.com/photo-1549887534-297f6f3a8b92?auto=format&fit=crop&w=400&q=80", "quantity": 10 },
+      { "_id": "p_2", "name": "Сарнай", "price": 21000, "imagePath": "https://images.unsplash.com/photo-1608366864622-4d6f5de33f5f?auto=format&fit=crop&w=400&q=80", "quantity": 5 },
+      { "_id": "p_13", "name": "Шар цэцэг", "price": 17000, "imagePath": "https://images.unsplash.com/photo-1592928305235-9e8f96b4e5a1?auto=format&fit=crop&w=400&q=80", "quantity": 7 },
+      { "_id": "p_14", "name": "Хул цэцэг", "price": 23000, "imagePath": "https://images.unsplash.com/photo-1592928305235-9e8f96b4e5a1?auto=format&fit=crop&w=400&q=80", "quantity": 4 }
     ]
   },
   {
     "_id": "s_2",
     "name": "IR Beauty Store",
     "phone": "88888888",
-    "imagePath": "images/scooter.png",
+    "imagePath": "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=800&q=80",
     "products": [
-      { "_id": "p_3", "name": "Лотус", "price": 15000, "imagePath": "images/flower3.png", "quantity": 0 },
-      { "_id": "p_4", "name": "Цэцгийн хос", "price": 12000, "imagePath": "images/flower4.png", "quantity": 12 }
+      { "_id": "p_3", "name": "Лотус", "price": 15000, "imagePath": "https://images.unsplash.com/photo-1592928305235-9e8f96b4e5a1?auto=format&fit=crop&w=400&q=80", "quantity": 0 },
+      { "_id": "p_4", "name": "Цэцгийн хос", "price": 12000, "imagePath": "https://images.unsplash.com/photo-1592928305235-9e8f96b4e5a1?auto=format&fit=crop&w=400&q=80", "quantity": 12 },
+      { "_id": "p_15", "name": "Чихэр цэцэг", "price": 16000, "imagePath": "https://images.unsplash.com/photo-1592928305235-9e8f96b4e5a1?auto=format&fit=crop&w=400&q=80", "quantity": 6 },
+      { "_id": "p_16", "name": "Сайхан цэцэг", "price": 20000, "imagePath": "https://images.unsplash.com/photo-1592928305235-9e8f96b4e5a1?auto=format&fit=crop&w=400&q=80", "quantity": 8 }
+    ]
+  },
+  {
+    "_id": "s_3",
+    "name": "Tech World",
+    "phone": "55555555",
+    "imagePath": "https://images.unsplash.com/photo-1518779578993-ec3579fee39f?auto=format&fit=crop&w=800&q=80",
+    "products": [
+      { "_id": "p_5", "name": "Smartphone X", "price": 350000, "imagePath": "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=400&q=80", "quantity": 15 },
+      { "_id": "p_6", "name": "Wireless Headphones", "price": 120000, "imagePath": "https://images.unsplash.com/photo-1580910051073-c12a90c91e25?auto=format&fit=crop&w=400&q=80", "quantity": 8 },
+      { "_id": "p_17", "name": "Laptop Pro", "price": 750000, "imagePath": "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=400&q=80", "quantity": 5 },
+      { "_id": "p_18", "name": "Smartwatch Z", "price": 95000, "imagePath": "https://images.unsplash.com/photo-1580910051073-c12a90c91e25?auto=format&fit=crop&w=400&q=80", "quantity": 12 }
+    ]
+  },
+  {
+    "_id": "s_4",
+    "name": "Fresh Mart",
+    "phone": "44444444",
+    "imagePath": "https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?auto=format&fit=crop&w=800&q=80",
+    "products": [
+      { "_id": "p_7", "name": "Organic Apples", "price": 2500, "imagePath": "https://images.unsplash.com/photo-1574226516831-e1dff420e8f8?auto=format&fit=crop&w=400&q=80", "quantity": 50 },
+      { "_id": "p_8", "name": "Fresh Milk 1L", "price": 1500, "imagePath": "https://images.unsplash.com/photo-1582515073490-dc5dc0be6e88?auto=format&fit=crop&w=400&q=80", "quantity": 30 },
+      { "_id": "p_19", "name": "Bananas", "price": 3000, "imagePath": "https://images.unsplash.com/photo-1574226516831-e1dff420e8f8?auto=format&fit=crop&w=400&q=80", "quantity": 40 },
+      { "_id": "p_20", "name": "Eggs 12pcs", "price": 6000, "imagePath": "https://images.unsplash.com/photo-1582515073490-dc5dc0be6e88?auto=format&fit=crop&w=400&q=80", "quantity": 25 }
+    ]
+  },
+  {
+    "_id": "s_5",
+    "name": "Fashion Hub",
+    "phone": "33333333",
+    "imagePath": "https://images.unsplash.com/photo-1521335629791-ce4aec67dd47?auto=format&fit=crop&w=800&q=80",
+    "products": [
+      { "_id": "p_9", "name": "Men's T-Shirt", "price": 25000, "imagePath": "https://images.unsplash.com/photo-1530845640405-3e9ad0f923e7?auto=format&fit=crop&w=400&q=80", "quantity": 20 },
+      { "_id": "p_10", "name": "Women's Jacket", "price": 55000, "imagePath": "https://images.unsplash.com/photo-1530845640405-3e9ad0f923e7?auto=format&fit=crop&w=400&q=80", "quantity": 10 },
+      { "_id": "p_21", "name": "Jeans", "price": 35000, "imagePath": "https://images.unsplash.com/photo-1530845640405-3e9ad0f923e7?auto=format&fit=crop&w=400&q=80", "quantity": 15 },
+      { "_id": "p_22", "name": "Sneakers", "price": 45000, "imagePath": "https://images.unsplash.com/photo-1530845640405-3e9ad0f923e7?auto=format&fit=crop&w=400&q=80", "quantity": 12 }
+    ]
+  },
+  {
+    "_id": "s_6",
+    "name": "Book Corner",
+    "phone": "22222222",
+    "imagePath": "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=800&q=80",
+    "products": [
+      { "_id": "p_11", "name": "Novel - The Great Adventure", "price": 18000, "imagePath": "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=400&q=80", "quantity": 12 },
+      { "_id": "p_12", "name": "Science Book - Physics", "price": 22000, "imagePath": "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=400&q=80", "quantity": 7 },
+      { "_id": "p_23", "name": "History Book - World War II", "price": 20000, "imagePath": "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=400&q=80", "quantity": 10 },
+      { "_id": "p_24", "name": "Children's Story Book", "price": 15000, "imagePath": "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=400&q=80", "quantity": 20 }
     ]
   }
 ]
