@@ -8,6 +8,8 @@ import 'components/register.dart';
 import 'components/forgot_password.dart';
 import 'components/admin/admin_home.dart';
 import 'components/user/order.dart';
+import 'components/admin/users.dart';
+import 'components/admin/items.dart';
 
 void main() {
   runApp(const MyApp());
@@ -29,7 +31,9 @@ class MyApp extends StatelessWidget {
         '/profile': (context) => const ProfilePage(),
         '/forgot_password': (context) => const ForgotPassword(),
         '/admin_home': (context) => const AdminHome(),
-        '/order': (context) => const OrderPage()
+        '/order': (context) => const OrderPage(),
+        '/users': (context) => const Users(),
+        '/items': (context) => const Items()
       },
     );
   }

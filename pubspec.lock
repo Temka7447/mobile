@@ -215,7 +215,12 @@ packages:
       sha256: "522f00f556e73044315fa4585ec3270f1808a4b186c936e612cab0b565ff1e00"
       url: "https://pub.dev"
     source: hosted
+<<<<<<< HEAD
     version: "0.7.6"
+=======
+<<<<<<< HEAD
+    version: "0.7.7"
+>>>>>>> 496678dd1d9276d44ea113f5f3ca926553e493b8
   typed_data:
     dependency: transitive
     description:
@@ -224,6 +229,9 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.0"
+=======
+    version: "0.7.6"
+>>>>>>> c11b52d19c7fe3fcb3c11a4886aebd4df70b6d83
   vector_math:
     dependency: transitive
     description:
