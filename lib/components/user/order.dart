@@ -14,14 +14,13 @@ class OrderPage extends StatefulWidget {
 class _OrderPageState extends State<OrderPage> {
   List<Store> _stores = [];
   bool _isLoading = true;
+  final String baseUrl = 'http://localhost:5000';
 
   @override
   void initState() {
     super.initState();
     _loadStores();
   }
-
-  final String baseUrl = 'http://localhost:5000';
 
   Future<void> _loadStores() async {
     try {
@@ -108,7 +107,7 @@ class _OrderPageState extends State<OrderPage> {
               kind: DetailKind.store,
               title: store.name,
               imagePath: store.imagePath,
-              // products: store.products,
+              shopId: store.id, // ✅ Pass shopId here
             ),
           ),
         );
@@ -128,20 +127,16 @@ class _OrderPageState extends State<OrderPage> {
         child: Column(
           children: [
             ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(22)),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
               child: SizedBox(
                 height: 140,
                 width: double.infinity,
                 child: store.imagePath.isNotEmpty
                     ? Image.network(
-                        // Make sure your backend serves images as static files
                         '$baseUrl/${store.imagePath}',
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Image.asset(
-                          'images/scooter.png',
-                          fit: BoxFit.cover,
-                        ),
+                        errorBuilder: (_, __, ___) =>
+                            Image.asset('images/scooter.png', fit: BoxFit.cover),
                       )
                     : Image.asset(
                         'images/scooter.png',
