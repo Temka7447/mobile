@@ -37,18 +37,20 @@ class _OrderPageState extends State<OrderPage> {
         _stores = [];
         _isLoading = false;
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Дэлгүүрүүдийг татахад алдаа гарлаа: $e')),
+      );
     }
   }
 
   Widget _imageForPath(String imagePath) {
-    // Local placeholder used when no imagePath provided
     const placeholder = 'images/scooter.png';
 
     if (imagePath.isEmpty) {
       return Image.asset(placeholder, fit: BoxFit.cover);
     }
 
-    // If the server sent an absolute URL, use it
+    // Absolute URL
     if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
       return Image.network(
         imagePath,
@@ -59,7 +61,7 @@ class _OrderPageState extends State<OrderPage> {
       );
     }
 
-    // Otherwise treat it as a relative path on your backend
+    // Relative path on backend — use StoreService.baseUrl
     final url = '${StoreService.baseUrl}/${imagePath}'.replaceAll('//', '/').replaceFirst('http:/', 'http://');
     return Image.network(
       url,
@@ -109,28 +111,32 @@ class _OrderPageState extends State<OrderPage> {
               Expanded(
                 child: _isLoading
                     ? const Center(child: CircularProgressIndicator())
-                    : _stores.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Text('Дэлгүүр олдсонгүй'),
-                                const SizedBox(height: 8),
-                                ElevatedButton(
-                                  onPressed: _loadStores,
-                                  child: const Text('Дахин ачааллах'),
-                                ),
-                              ],
-                            ),
-                          )
-                        : ListView.separated(
-                            itemCount: _stores.length,
-                            separatorBuilder: (_, __) => const SizedBox(height: 20),
-                            itemBuilder: (context, index) {
-                              final store = _stores[index];
-                              return storeCard(context: context, store: store);
-                            },
-                          ),
+                    : RefreshIndicator(
+                        onRefresh: _loadStores,
+                        child: _stores.isEmpty
+                            ? ListView(
+                                // allow pull-to-refresh when empty
+                                children: [
+                                  const SizedBox(height: 60),
+                                  const Center(child: Text('Дэлгүүр олдсонгүй')),
+                                  const SizedBox(height: 8),
+                                  Center(
+                                    child: ElevatedButton(
+                                      onPressed: _loadStores,
+                                      child: const Text('Дахин ачааллах'),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : ListView.separated(
+                                itemCount: _stores.length,
+                                separatorBuilder: (_, __) => const SizedBox(height: 20),
+                                itemBuilder: (context, index) {
+                                  final store = _stores[index];
+                                  return storeCard(context: context, store: store);
+                                },
+                              ),
+                      ),
               ),
             ],
           ),
@@ -179,15 +185,28 @@ class _OrderPageState extends State<OrderPage> {
             Padding(
               padding: const EdgeInsets.all(12),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
-                    child: Text(store.name,
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w600)),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(store.name,
+                            style: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 6),
+                        // show address if available (location.address)
+                        if (store.address.isNotEmpty)
+                          Text(
+                            store.address,
+                            style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                      ],
+                    ),
                   ),
-                  Text("утас ${store.phone}",
-                      style: const TextStyle(fontSize: 14)),
+                  const SizedBox(width: 8),
+                  Text("утас ${store.phone}", style: const TextStyle(fontSize: 14)),
                 ],
               ),
             )

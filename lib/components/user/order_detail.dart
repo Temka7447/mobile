@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:mobilebiydaalt/models/product.dart';
-import '../../services/product_service.dart';
+import 'package:mobilebiydaalt/services/product_service.dart';
+import 'package:mobilebiydaalt/services/cart_service.dart';
+import '../user/checkout_page.dart';
 
 enum DetailKind { order, store }
 
@@ -30,12 +33,16 @@ class _DetailPageState extends State<DetailPage> {
   bool _loading = true;
 
   static const double _bottomBarHeight = 64.0;
+  final NumberFormat _fmt = NumberFormat('#,##0', 'en_US');
+  final cart = CartService.instance;
 
   int get _total {
     int sum = 0;
     _selected.forEach((index, qty) {
       if (index >= 0 && index < _products.length) {
-        sum += _products[index].price * qty;
+        final productPrice = _products[index].price;
+        final priceInt = (productPrice is num) ? (productPrice as num).toInt() : int.tryParse(productPrice.toString()) ?? 0;
+        sum += priceInt * qty;
       }
     });
     return sum;
@@ -49,7 +56,16 @@ class _DetailPageState extends State<DetailPage> {
     } else {
       _loading = false;
     }
+    cart.addListener(_onCartChanged);
   }
+
+  @override
+  void dispose() {
+    cart.removeListener(_onCartChanged);
+    super.dispose();
+  }
+
+  void _onCartChanged() => setState(() {});
 
   Future<void> _fetchProducts(String shopId) async {
     setState(() => _loading = true);
@@ -106,7 +122,6 @@ class _DetailPageState extends State<DetailPage> {
   Widget _buildShopImage() {
     if (widget.imageWidget != null) return widget.imageWidget!;
     if (widget.imagePath != null && widget.imagePath!.isNotEmpty) {
-      // If widget.imagePath contains a remote URL, show it; otherwise treat as local asset path
       final ip = widget.imagePath!;
       if (ip.startsWith('http://') || ip.startsWith('https://')) {
         return Image.network(ip, height: 160, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox.shrink());
@@ -118,9 +133,9 @@ class _DetailPageState extends State<DetailPage> {
   }
 
   void _increment(int index) {
+    if (index < 0 || index >= _products.length) return;
     final selectedQty = _selected[index] ?? 0;
     final availableQty = _products[index].quantity;
-
     if (selectedQty < availableQty) {
       if (!mounted) return;
       setState(() {
@@ -139,14 +154,43 @@ class _DetailPageState extends State<DetailPage> {
   }
 
   void _decrement(int index) {
+    if (index < 0 || index >= _products.length) return;
     final selectedQty = _selected[index] ?? 0;
     if (selectedQty > 0) {
       if (!mounted) return;
       setState(() {
-        _selected[index] = selectedQty - 1;
-        if (_selected[index] == 0) _selected.remove(index);
+        final newQty = selectedQty - 1;
+        if (newQty > 0) {
+          _selected[index] = newQty;
+        } else {
+          _selected.remove(index);
+        }
       });
     }
+  }
+
+  void _addSelectedToCart() {
+    if (_selected.isEmpty) return;
+    for (final entry in _selected.entries) {
+      final idx = entry.key;
+      final qty = entry.value;
+      if (idx >= 0 && idx < _products.length && qty > 0) {
+        final product = _products[idx];
+        // Ensure we don't add more than available stock
+        final toAdd = qty.clamp(0, product.quantity);
+        if (toAdd > 0) {
+          cart.addItem(product, toAdd);
+        }
+      }
+    }
+    setState(() => _selected.clear());
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Сагсанд нэмэгдлээ')));
+  }
+
+  void _goToCheckout() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const CheckoutPage()),
+    );
   }
 
   @override
@@ -164,6 +208,30 @@ class _DetailPageState extends State<DetailPage> {
       appBar: AppBar(
         title: Text(widget.title),
         backgroundColor: isOrder ? Colors.orange : Colors.deepPurple,
+        actions: [
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.shopping_bag_outlined),
+                onPressed: _goToCheckout, // navigate to checkout page
+              ),
+              if (cart.totalItems > 0)
+                Positioned(
+                  right: 6,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(12)),
+                    child: Text(
+                      cart.totalItems.toString(),
+                      style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
       ),
       body: _products.isEmpty
           ? const Center(child: Text("Бүтээгдэхүүн байхгүй байна"))
@@ -172,15 +240,11 @@ class _DetailPageState extends State<DetailPage> {
                 if (widget.imageWidget != null || widget.imagePath != null)
                   Padding(
                     padding: const EdgeInsets.all(12),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(18),
-                      child: _buildShopImage(),
-                    ),
+                    child: ClipRRect(borderRadius: BorderRadius.circular(18), child: _buildShopImage()),
                   ),
                 Expanded(
                   child: GridView.builder(
-                    padding: const EdgeInsets.only(
-                        top: 12, left: 12, right: 12, bottom: _bottomBarHeight + 12),
+                    padding: const EdgeInsets.only(top: 12, left: 12, right: 12, bottom: _bottomBarHeight + 12),
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
                       mainAxisSpacing: 12,
@@ -199,13 +263,7 @@ class _DetailPageState extends State<DetailPage> {
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.12),
-                                blurRadius: 6,
-                                offset: const Offset(2, 4),
-                              ),
-                            ],
+                            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 6, offset: const Offset(2, 4))],
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -213,8 +271,7 @@ class _DetailPageState extends State<DetailPage> {
                               Expanded(
                                 flex: 5,
                                 child: ClipRRect(
-                                  borderRadius: const BorderRadius.vertical(
-                                      top: Radius.circular(12)),
+                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
                                   child: _buildProductImage(p),
                                 ),
                               ),
@@ -222,8 +279,7 @@ class _DetailPageState extends State<DetailPage> {
                                 padding: const EdgeInsets.all(8.0),
                                 child: Text(
                                   p.name,
-                                  style: const TextStyle(
-                                      fontSize: 14, fontWeight: FontWeight.w600),
+                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -231,63 +287,43 @@ class _DetailPageState extends State<DetailPage> {
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 8),
                                 child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     RichText(
                                       text: TextSpan(
                                         children: [
                                           TextSpan(
-                                            text: '${p.price}',
+                                            text:
+                                                '${_fmt.format((p.price is num) ? (p.price as num) : num.tryParse(p.price.toString()) ?? 0)}₮',
                                             style: TextStyle(
                                               fontSize: 13,
                                               fontWeight: FontWeight.bold,
-                                              color: selected
-                                                  ? Colors.orange
-                                                  : Colors.black87,
+                                              color: selected ? Colors.orange : Colors.black87,
                                             ),
                                           ),
                                           if (selected)
                                             TextSpan(
                                               text: ' × $qty',
-                                              style: const TextStyle(
-                                                  fontSize: 13,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.black54),
+                                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black54),
                                             ),
                                         ],
                                       ),
                                     ),
-                                    Text('Бэлэн: ${p.quantity}',
-                                        style: const TextStyle(fontSize: 12)),
+                                    Text('Бэлэн: ${p.quantity}', style: const TextStyle(fontSize: 12)),
                                   ],
                                 ),
                               ),
                               if (selected)
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                   child: SizedBox(
                                     height: 40,
                                     child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
+                                      mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
-                                        IconButton(
-                                          onPressed: () => _decrement(idx),
-                                          icon: const Icon(
-                                              Icons.remove_circle_outline,
-                                              color: Colors.redAccent),
-                                        ),
-                                        Text('$qty',
-                                            style: const TextStyle(
-                                                fontWeight: FontWeight.bold)),
-                                        IconButton(
-                                          onPressed: () => _increment(idx),
-                                          icon: const Icon(
-                                              Icons.add_circle_outline,
-                                              color: Colors.green),
-                                        ),
+                                        IconButton(onPressed: () => _decrement(idx), icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent)),
+                                        Text('$qty', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                        IconButton(onPressed: () => _increment(idx), icon: const Icon(Icons.add_circle_outline, color: Colors.green)),
                                       ],
                                     ),
                                   ),
@@ -304,38 +340,32 @@ class _DetailPageState extends State<DetailPage> {
       bottomNavigationBar: Container(
         height: _bottomBarHeight,
         padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: Colors.grey.shade300)),
-        ),
+        decoration: BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: Colors.grey.shade300))),
         child: Row(
           children: [
             Expanded(
               child: Text.rich(
                 TextSpan(
                   children: [
-                    const TextSpan(
-                        text: 'Нийт тооцоо  ',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, color: Colors.orange)),
-                    TextSpan(
-                        text: '$_total мт',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, color: Colors.black)),
+                    const TextSpan(text: 'Нийт тооцоо  ', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
+                    TextSpan(text: '${_fmt.format(_total)} ₮', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
                   ],
                 ),
               ),
             ),
+            ElevatedButton(
+              onPressed: _total > 0 ? _addSelectedToCart : null,
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10)),
+              child: const Text('Сагсанд нэмэх'),
+            ),
+            const SizedBox(width: 8),
             IconButton(
-              onPressed: _total > 0
+              onPressed: _total >= 0
                   ? () {
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                              content: Text('Нийт $_total мт-оор захиалах')));
+                      _goToCheckout();
                     }
                   : null,
-              icon: const Icon(Icons.arrow_forward_ios),
+              icon: const Icon(Icons.arrow_forward_ios,),
             ),
           ],
         ),
