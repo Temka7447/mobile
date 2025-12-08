@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import '../../models/product.dart';
 
 enum DetailKind { order, store }
@@ -8,7 +10,7 @@ class DetailPage extends StatefulWidget {
   final String title;
   final String? imagePath;
   final Widget? imageWidget;
-  final List<Product>? products;
+  final String? shopId;
 
   const DetailPage({
     super.key,
@@ -16,7 +18,7 @@ class DetailPage extends StatefulWidget {
     required this.title,
     this.imagePath,
     this.imageWidget,
-    this.products,
+    this.shopId,
   });
 
   @override
@@ -24,16 +26,11 @@ class DetailPage extends StatefulWidget {
 }
 
 class _DetailPageState extends State<DetailPage> {
-  late List<Product> _products;
-  final Map<int, int> _selected = {}; // user-selected quantity
+  late List<Product> _products = [];
+  final Map<int, int> _selected = {};
+  bool _loading = true;
 
   static const double _bottomBarHeight = 64.0;
-
-  @override
-  void initState() {
-    super.initState();
-    _products = widget.products ?? [];
-  }
 
   int get _total {
     int sum = 0;
@@ -43,6 +40,37 @@ class _DetailPageState extends State<DetailPage> {
       }
     });
     return sum;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.shopId != null) {
+      _fetchProducts(widget.shopId!);
+    } else {
+      _loading = false;
+    }
+  }
+  final String baseUrl = 'http://localhost:5000';
+
+
+  Future<void> _fetchProducts(String shopId) async {
+    try {
+      final url = '$baseUrl/shops/$shopId/products'; // use baseUrl
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final List data = jsonDecode(response.body);
+        setState(() {
+          _products = data.map((item) => Product.fromJson(item)).toList();
+          _loading = false;
+        });
+      } else {
+        throw Exception('Failed to load products');
+      }
+    } catch (e) {
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
   }
 
   void _increment(int index) {
@@ -68,6 +96,13 @@ class _DetailPageState extends State<DetailPage> {
   Widget build(BuildContext context) {
     final bool isOrder = widget.kind == DetailKind.order;
 
+    if (_loading) {
+      return Scaffold(
+        appBar: AppBar(title: Text(widget.title)),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
@@ -92,12 +127,8 @@ class _DetailPageState extends State<DetailPage> {
                 Expanded(
                   child: GridView.builder(
                     padding: const EdgeInsets.only(
-                        top: 12,
-                        left: 12,
-                        right: 12,
-                        bottom: _bottomBarHeight + 12),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
+                        top: 12, left: 12, right: 12, bottom: _bottomBarHeight + 12),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
                       mainAxisSpacing: 12,
                       crossAxisSpacing: 12,
@@ -129,9 +160,8 @@ class _DetailPageState extends State<DetailPage> {
                               Expanded(
                                 flex: 5,
                                 child: ClipRRect(
-                                  borderRadius: const BorderRadius.vertical(
-                                      top: Radius.circular(12)),
-                                  child: Image.asset(
+                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                                  child: Image.network(
                                     p.imagePath,
                                     fit: BoxFit.cover,
                                     errorBuilder: (c, e, s) =>
@@ -144,18 +174,15 @@ class _DetailPageState extends State<DetailPage> {
                                 child: Text(
                                   p.name,
                                   style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600),
+                                      fontSize: 14, fontWeight: FontWeight.w600),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
                                 child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     RichText(
                                       text: TextSpan(
@@ -165,9 +192,7 @@ class _DetailPageState extends State<DetailPage> {
                                             style: TextStyle(
                                               fontSize: 13,
                                               fontWeight: FontWeight.bold,
-                                              color: selected
-                                                  ? Colors.orange
-                                                  : Colors.black87,
+                                              color: selected ? Colors.orange : Colors.black87,
                                             ),
                                           ),
                                           if (selected)
@@ -188,27 +213,23 @@ class _DetailPageState extends State<DetailPage> {
                               ),
                               if (selected)
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
+                                  padding:
+                                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                   child: SizedBox(
                                     height: 40,
                                     child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
+                                      mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
                                         IconButton(
                                           onPressed: () => _decrement(idx),
-                                          icon: const Icon(
-                                              Icons.remove_circle_outline,
+                                          icon: const Icon(Icons.remove_circle_outline,
                                               color: Colors.redAccent),
                                         ),
                                         Text('$qty',
-                                            style: const TextStyle(
-                                                fontWeight: FontWeight.bold)),
+                                            style: const TextStyle(fontWeight: FontWeight.bold)),
                                         IconButton(
                                           onPressed: () => _increment(idx),
-                                          icon: const Icon(
-                                              Icons.add_circle_outline,
+                                          icon: const Icon(Icons.add_circle_outline,
                                               color: Colors.green),
                                         ),
                                       ],
@@ -252,8 +273,8 @@ class _DetailPageState extends State<DetailPage> {
             IconButton(
               onPressed: _total > 0
                   ? () {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text('Proceeding with total $_total мт')));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Proceeding with total $_total мт')));
                     }
                   : null,
               icon: const Icon(Icons.arrow_forward_ios),

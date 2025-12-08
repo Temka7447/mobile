@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import '../../models/store.dart';
 import 'order_detail.dart';
 
@@ -13,6 +13,7 @@ class OrderPage extends StatefulWidget {
 
 class _OrderPageState extends State<OrderPage> {
   List<Store> _stores = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -20,15 +21,25 @@ class _OrderPageState extends State<OrderPage> {
     _loadStores();
   }
 
+  final String baseUrl = 'http://localhost:5000';
+
   Future<void> _loadStores() async {
     try {
-      final String data = await rootBundle.loadString('assets/stores.json');
-      final List<dynamic> jsonResult = json.decode(data);
-      setState(() {
-        _stores = jsonResult.map((e) => Store.fromJson(e)).toList();
-      });
+      final response = await http.get(Uri.parse('$baseUrl/shops'));
+
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonResult = json.decode(response.body);
+        setState(() {
+          _stores = jsonResult.map((e) => Store.fromJson(e)).toList();
+          _isLoading = false;
+        });
+      } else {
+        print('Failed to fetch stores. Status: ${response.statusCode}');
+        setState(() => _isLoading = false);
+      }
     } catch (e) {
       print('Failed to load stores: $e');
+      setState(() => _isLoading = false);
     }
   }
 
@@ -42,7 +53,6 @@ class _OrderPageState extends State<OrderPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top Bar
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: const [
@@ -69,9 +79,8 @@ class _OrderPageState extends State<OrderPage> {
                 ),
               ),
               const SizedBox(height: 20),
-              // Store list
               Expanded(
-                child: _stores.isEmpty
+                child: _isLoading
                     ? const Center(child: CircularProgressIndicator())
                     : ListView.separated(
                         itemCount: _stores.length,
@@ -99,7 +108,7 @@ class _OrderPageState extends State<OrderPage> {
               kind: DetailKind.store,
               title: store.name,
               imagePath: store.imagePath,
-              products: store.products,
+              // products: store.products,
             ),
           ),
         );
@@ -124,10 +133,20 @@ class _OrderPageState extends State<OrderPage> {
               child: SizedBox(
                 height: 140,
                 width: double.infinity,
-                child: Image.asset(
-                  store.imagePath.isNotEmpty ? store.imagePath : 'images/default.png',
-                  fit: BoxFit.cover,
-                ),
+                child: store.imagePath.isNotEmpty
+                    ? Image.network(
+                        // Make sure your backend serves images as static files
+                        '$baseUrl/${store.imagePath}',
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Image.asset(
+                          'assets/images/default.png',
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    : Image.asset(
+                        'assets/images/default.png',
+                        fit: BoxFit.cover,
+                      ),
               ),
             ),
             Padding(
@@ -135,9 +154,11 @@ class _OrderPageState extends State<OrderPage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(store.name,
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w600)),
+                  Expanded(
+                    child: Text(store.name,
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w600)),
+                  ),
                   Text("утас ${store.phone}",
                       style: const TextStyle(fontSize: 14)),
                 ],

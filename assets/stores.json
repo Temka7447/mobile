@@ -1,20 +1,22 @@
 [
   {
+    "_id": "s_1",
     "name": "Цэцэгт мэндчилгээ",
     "phone": "99999999",
     "imagePath": "images/scooter.png",
     "products": [
-      {"name": "Цэнхэр цэцэг", "price": 19000, "imagePath": "images/scooter.png", "quantity": 10},
-      {"name": "Сарнай", "price": 21000, "imagePath": "images/flower2.png", "quantity": 5}
+      { "_id": "p_1", "name": "Цэнхэр цэцэг", "price": 19000, "imagePath": "images/scooter.png", "quantity": 10 },
+      { "_id": "p_2", "name": "Сарнай", "price": 21000, "imagePath": "images/flower2.png", "quantity": 5 }
     ]
   },
   {
+    "_id": "s_2",
     "name": "IR Beauty Store",
     "phone": "88888888",
     "imagePath": "images/scooter.png",
     "products": [
-      {"name": "Лотус", "price": 15000, "imagePath": "images/flower3.png", "quantity": 0},
-      {"name": "Цэцгийн хос", "price": 12000, "imagePath": "images/flower4.png", "quantity": 12}
+      { "_id": "p_3", "name": "Лотус", "price": 15000, "imagePath": "images/flower3.png", "quantity": 0 },
+      { "_id": "p_4", "name": "Цэцгийн хос", "price": 12000, "imagePath": "images/flower4.png", "quantity": 12 }
     ]
   }
 ]
