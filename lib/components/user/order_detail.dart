@@ -1,7 +1,6 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import '../../models/product.dart';
+import 'package:mobilebiydaalt/models/product.dart';
+import '../../services/product_service.dart';
 
 enum DetailKind { order, store }
 
@@ -26,7 +25,6 @@ class DetailPage extends StatefulWidget {
 }
 
 class _DetailPageState extends State<DetailPage> {
-  final String baseUrl = 'http://localhost:5000';
   List<Product> _products = [];
   final Map<int, int> _selected = {};
   bool _loading = true;
@@ -54,20 +52,14 @@ class _DetailPageState extends State<DetailPage> {
   }
 
   Future<void> _fetchProducts(String shopId) async {
+    setState(() => _loading = true);
     try {
-      final url = '$baseUrl/shops/$shopId/products';
-      final response = await http.get(Uri.parse(url));
-
-      if (response.statusCode == 200) {
-        final List data = jsonDecode(response.body);
-        if (!mounted) return;
-        setState(() {
-          _products = data.map((item) => Product.fromJson(item)).toList();
-          _loading = false;
-        });
-      } else {
-        throw Exception('Failed to load products: ${response.statusCode}');
-      }
+      final products = await ProductService.fetchProducts(shopId);
+      if (!mounted) return;
+      setState(() {
+        _products = products;
+        _loading = false;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
@@ -78,6 +70,51 @@ class _DetailPageState extends State<DetailPage> {
         ),
       );
     }
+  }
+
+  Widget _networkOrAsset(String imagePath, {BoxFit fit = BoxFit.cover, double? height}) {
+    const placeholder = 'images/scooter.png';
+
+    if (imagePath.isEmpty) {
+      return Image.asset(placeholder, height: height, fit: fit);
+    }
+
+    final url = (imagePath.startsWith('http://') || imagePath.startsWith('https://'))
+        ? imagePath
+        : '${ProductService.baseUrl}/${imagePath}'.replaceAll('//', '/').replaceFirst('http:/', 'http://');
+
+    return Image.network(
+      url,
+      height: height,
+      fit: fit,
+      loadingBuilder: (context, child, progress) =>
+          progress == null ? child : const Center(child: CircularProgressIndicator()),
+      errorBuilder: (context, error, stackTrace) => Image.asset(placeholder, height: height, fit: fit),
+    );
+  }
+
+  Widget _buildProductImage(Product p) {
+    if (p.imagePath.isNotEmpty) {
+      return _networkOrAsset(p.imagePath);
+    }
+    return Container(
+      color: Colors.grey.shade200,
+      child: const Icon(Icons.image_not_supported, size: 40),
+    );
+  }
+
+  Widget _buildShopImage() {
+    if (widget.imageWidget != null) return widget.imageWidget!;
+    if (widget.imagePath != null && widget.imagePath!.isNotEmpty) {
+      // If widget.imagePath contains a remote URL, show it; otherwise treat as local asset path
+      final ip = widget.imagePath!;
+      if (ip.startsWith('http://') || ip.startsWith('https://')) {
+        return Image.network(ip, height: 160, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox.shrink());
+      } else {
+        return Image.asset(ip, height: 160, fit: BoxFit.cover);
+      }
+    }
+    return const SizedBox.shrink();
   }
 
   void _increment(int index) {
@@ -110,33 +147,6 @@ class _DetailPageState extends State<DetailPage> {
         if (_selected[index] == 0) _selected.remove(index);
       });
     }
-  }
-
-  Widget _buildProductImage(Product p) {
-    if (p.imagePath.isNotEmpty) {
-      final imageUrl =
-          p.imagePath.startsWith('http') ? p.imagePath : '$baseUrl/${p.imagePath}';
-      return Image.network(
-        imageUrl,
-        fit: BoxFit.cover,
-        loadingBuilder: (context, child, progress) =>
-            progress == null ? child : const Center(child: CircularProgressIndicator()),
-        errorBuilder: (context, error, stackTrace) =>
-            Container(color: Colors.grey.shade200, child: const Icon(Icons.image_not_supported, size: 40)),
-      );
-    }
-    return Container(
-      color: Colors.grey.shade200,
-      child: const Icon(Icons.image_not_supported, size: 40),
-    );
-  }
-
-  Widget _buildShopImage() {
-    if (widget.imageWidget != null) return widget.imageWidget!;
-    if (widget.imagePath != null && widget.imagePath!.isNotEmpty) {
-      return Image.asset(widget.imagePath!, height: 160, fit: BoxFit.cover);
-    }
-    return const SizedBox.shrink();
   }
 
   @override

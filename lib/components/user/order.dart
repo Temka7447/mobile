@@ -1,7 +1,6 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import '../../models/store.dart';
+import 'package:mobilebiydaalt/models/store.dart';
+import 'package:mobilebiydaalt/services/stores_service.dart';
 import 'order_detail.dart';
 
 class OrderPage extends StatefulWidget {
@@ -14,7 +13,6 @@ class OrderPage extends StatefulWidget {
 class _OrderPageState extends State<OrderPage> {
   List<Store> _stores = [];
   bool _isLoading = true;
-  final String baseUrl = 'http://localhost:5000';
 
   @override
   void initState() {
@@ -23,23 +21,53 @@ class _OrderPageState extends State<OrderPage> {
   }
 
   Future<void> _loadStores() async {
+    setState(() => _isLoading = true);
     try {
-      final response = await http.get(Uri.parse('$baseUrl/shops'));
-
-      if (response.statusCode == 200) {
-        final List<dynamic> jsonResult = json.decode(response.body);
-        setState(() {
-          _stores = jsonResult.map((e) => Store.fromJson(e)).toList();
-          _isLoading = false;
-        });
-      } else {
-        print('Failed to fetch stores. Status: ${response.statusCode}');
-        setState(() => _isLoading = false);
-      }
+      final stores = await StoreService.fetchStores();
+      if (!mounted) return;
+      setState(() {
+        _stores = stores;
+        _isLoading = false;
+      });
     } catch (e) {
+      // ignore: avoid_print
       print('Failed to load stores: $e');
-      setState(() => _isLoading = false);
+      if (!mounted) return;
+      setState(() {
+        _stores = [];
+        _isLoading = false;
+      });
     }
+  }
+
+  Widget _imageForPath(String imagePath) {
+    // Local placeholder used when no imagePath provided
+    const placeholder = 'images/scooter.png';
+
+    if (imagePath.isEmpty) {
+      return Image.asset(placeholder, fit: BoxFit.cover);
+    }
+
+    // If the server sent an absolute URL, use it
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return Image.network(
+        imagePath,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, progress) =>
+            progress == null ? child : const Center(child: CircularProgressIndicator()),
+        errorBuilder: (_, __, ___) => Image.asset(placeholder, fit: BoxFit.cover),
+      );
+    }
+
+    // Otherwise treat it as a relative path on your backend
+    final url = '${StoreService.baseUrl}/${imagePath}'.replaceAll('//', '/').replaceFirst('http:/', 'http://');
+    return Image.network(
+      url,
+      fit: BoxFit.cover,
+      loadingBuilder: (context, child, progress) =>
+          progress == null ? child : const Center(child: CircularProgressIndicator()),
+      errorBuilder: (_, __, ___) => Image.asset(placeholder, fit: BoxFit.cover),
+    );
   }
 
   @override
@@ -81,14 +109,28 @@ class _OrderPageState extends State<OrderPage> {
               Expanded(
                 child: _isLoading
                     ? const Center(child: CircularProgressIndicator())
-                    : ListView.separated(
-                        itemCount: _stores.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 20),
-                        itemBuilder: (context, index) {
-                          final store = _stores[index];
-                          return storeCard(context: context, store: store);
-                        },
-                      ),
+                    : _stores.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text('Дэлгүүр олдсонгүй'),
+                                const SizedBox(height: 8),
+                                ElevatedButton(
+                                  onPressed: _loadStores,
+                                  child: const Text('Дахин ачааллах'),
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView.separated(
+                            itemCount: _stores.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 20),
+                            itemBuilder: (context, index) {
+                              final store = _stores[index];
+                              return storeCard(context: context, store: store);
+                            },
+                          ),
               ),
             ],
           ),
@@ -107,7 +149,7 @@ class _OrderPageState extends State<OrderPage> {
               kind: DetailKind.store,
               title: store.name,
               imagePath: store.imagePath,
-              shopId: store.id, // ✅ Pass shopId here
+              shopId: store.id,
             ),
           ),
         );
@@ -131,17 +173,7 @@ class _OrderPageState extends State<OrderPage> {
               child: SizedBox(
                 height: 140,
                 width: double.infinity,
-                child: store.imagePath.isNotEmpty
-                    ? Image.network(
-                        '$baseUrl/${store.imagePath}',
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
-                            Image.asset('images/scooter.png', fit: BoxFit.cover),
-                      )
-                    : Image.asset(
-                        'images/scooter.png',
-                        fit: BoxFit.cover,
-                      ),
+                child: _imageForPath(store.imagePath),
               ),
             ),
             Padding(

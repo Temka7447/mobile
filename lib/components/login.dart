@@ -15,6 +15,27 @@ class _LoginPageState extends State<LoginPage> {
   bool _showPassword = false;
   bool _isLoading = false;
 
+  @override
+  void initState() {
+    super.initState();
+    _checkAlreadyLoggedIn();
+  }
+
+  void _checkAlreadyLoggedIn() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('jwt_token');
+    final role = prefs.getString('user_role') ?? 'user';
+
+    if (token != null) {
+      if (!mounted) return;
+      if (role == 'admin') {
+        Navigator.pushReplacementNamed(context, '/admin_home');
+      } else {
+        Navigator.pushReplacementNamed(context, '/home');
+      }
+    }
+  }
+
   void _login() async {
     final phone = phoneController.text.trim();
     final password = passwordController.text.trim();
@@ -37,7 +58,6 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       final result = await ApiService.loginUser(phone, password);
-
       if (!context.mounted) return;
 
       if (result.containsKey("error")) {
@@ -45,17 +65,19 @@ class _LoginPageState extends State<LoginPage> {
           SnackBar(content: Text(result["error"])),
         );
       } else {
-        final token = result['token'];
-
-        // Save JWT token locally
         final prefs = await SharedPreferences.getInstance();
+        final token = result['token'];
+        final user = result['user'];
+
         await prefs.setString('jwt_token', token);
+        await prefs.setString('user_role', user['role'] ?? 'user');
+        await prefs.setString('user_phone', user['phone']);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result["message"] ?? "Амжилттай нэвтэрлээ")),
-        );
-
-        Navigator.pushReplacementNamed(context, '/home');
+        if (user['role'] == 'admin') {
+          Navigator.pushReplacementNamed(context, '/admin_home');
+        } else {
+          Navigator.pushReplacementNamed(context, '/home');
+        }
       }
     } catch (e) {
       if (!context.mounted) return;
@@ -71,76 +93,97 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[900],
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Container(
-            width: 380,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
             padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Нэвтрэх',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: phoneController,
-                  decoration: const InputDecoration(labelText: 'Утасны дугаар'),
-                  keyboardType: TextInputType.phone,
-                ),
-                TextField(
-                  controller: passwordController,
-                  decoration: InputDecoration(
-                    labelText: 'Нууц үг',
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _showPassword ? Icons.visibility : Icons.visibility_off,
-                        color: Colors.orange,
+            child: Container(
+              width: 380,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Нэвтрэх',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: phoneController,
+                    decoration: InputDecoration(
+                      labelText: 'Утасны дугаар',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      onPressed: () => setState(() => _showPassword = !_showPassword),
                     ),
+                    keyboardType: TextInputType.phone,
+                    textInputAction: TextInputAction.next,
                   ),
-                  obscureText: !_showPassword,
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _login,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 40),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(360)),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: passwordController,
+                    decoration: InputDecoration(
+                      labelText: 'Нууц үг',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _showPassword ? Icons.visibility : Icons.visibility_off,
+                          color: Colors.orange,
+                        ),
+                        onPressed: () =>
+                            setState(() => _showPassword = !_showPassword),
+                      ),
+                    ),
+                    obscureText: !_showPassword,
+                    textInputAction: TextInputAction.done,
                   ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 18,
-                          width: 18,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                        )
-                      : const Text('Нэвтрэх'),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.pushNamed(context, '/forgot_password'),
-                      child: const Text('Нууц үг мартсан'),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : _login,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 12, horizontal: 40),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(360),
+                      ),
                     ),
-                    TextButton(
-                      onPressed: () => Navigator.pushNamed(context, '/register'),
-                      child: const Text('Бүртгүүлэх'),
-                    ),
-                  ],
-                ),
-              ],
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text('Нэвтрэх'),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      TextButton(
+                        onPressed: () =>
+                            Navigator.pushNamed(context, '/forgot_password'),
+                        child: const Text('Нууц үг мартсан'),
+                      ),
+                      TextButton(
+                        onPressed: () =>
+                            Navigator.pushNamed(context, '/register'),
+                        child: const Text('Бүртгүүлэх'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),

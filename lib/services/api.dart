@@ -3,10 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  // Use 10.0.2.2 for Android emulator, replace with your PC IP for real device
   static const String baseUrl = "http://localhost:5000";
-
-  // ---------------- Register user ----------------
   static Future<Map<String, dynamic>> registerUser(
       String name, String lastName, String phone, String password) async {
     try {
@@ -21,20 +18,18 @@ class ApiService {
         }),
       );
 
+      final data = jsonDecode(response.body);
       if (response.statusCode == 200 || response.statusCode == 201) {
-        return jsonDecode(response.body);
+        return data as Map<String, dynamic>;
       } else {
-        return {
-          "error": jsonDecode(response.body)["error"] ?? "Failed to register user"
-        };
+        return {"error": data["error"] ?? "Failed to register user"};
       }
     } catch (e) {
       return {"error": "Failed to connect to server: $e"};
     }
   }
-
-  // ---------------- Login user ----------------
-  static Future<Map<String, dynamic>> loginUser(String phone, String password) async {
+  static Future<Map<String, dynamic>> loginUser(
+      String phone, String password) async {
     try {
       final response = await http.post(
         Uri.parse("$baseUrl/login"),
@@ -42,31 +37,43 @@ class ApiService {
         body: jsonEncode({"phone": phone, "password": password}),
       );
 
+      final data = jsonDecode(response.body);
+
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-
-        // Save token in SharedPreferences
+        final token = (data['token'] as String?) ?? '';
+        final rawUser = (data['user'] is Map) ? data['user'] as Map<String, dynamic> : data as Map<String, dynamic>;
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString("token", data["token"]);
-
-        return data;
-      } else {
-        return {
-          "error": jsonDecode(response.body)["error"] ?? "Failed to login user"
+        if (token.isNotEmpty) {
+          await prefs.setString("jwt_token", token);
+        }
+        await prefs.setString("user_role", (rawUser['role'] as String?) ?? "user");
+        await prefs.setString("user_phone", (rawUser['phone'] as String?) ?? "");
+        final normalized = {
+          "id": (rawUser['_id'] ?? rawUser['id'] ?? '').toString(),
+          "name": (rawUser['name'] ?? '').toString(),
+          "lastName": (rawUser['lastName'] ?? '').toString(),
+          "phone": (rawUser['phone'] ?? '').toString(),
+          "email": (rawUser['email'] ?? '').toString(),
+          "role": (rawUser['role'] ?? 'user').toString(),
         };
+
+        return {
+          "token": token,
+          "user": normalized,
+        };
+      } else {
+        return {"error": data["error"] ?? data["message"] ?? "Failed to login user"};
       }
     } catch (e) {
       return {"error": "Failed to connect to server: $e"};
     }
   }
 
-  // ---------------- Get logged-in user ----------------
   static Future<Map<String, dynamic>> getLoggedInUser() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString("token");
-
-      if (token == null) return {"error": "No token found"};
+      final token = prefs.getString("jwt_token");
+      if (token == null || token.isEmpty) return {"error": "No token found"};
 
       final response = await http.get(
         Uri.parse("$baseUrl/users/me"),
@@ -76,19 +83,41 @@ class ApiService {
         },
       );
 
+      print('GET $baseUrl/users/me -> ${response.statusCode}: ${response.body}');
+
+      final data = jsonDecode(response.body);
+
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      } else {
+        // Server may return the user object at top-level or nested under "user".
+        Map<String, dynamic> rawUser;
+        if (data is Map && data['user'] is Map) {
+          rawUser = Map<String, dynamic>.from(data['user'] as Map);
+        } else if (data is Map && (data.containsKey('id') || data.containsKey('_id') || data.containsKey('name'))) {
+          rawUser = Map<String, dynamic>.from(data as Map);
+        } else {
+          // Unexpected shape — return error
+          return {"error": "Unexpected response shape from server"};
+        }
+
+        final id = (rawUser['_id'] ?? rawUser['id'] ?? '').toString();
+
         return {
-          "error": jsonDecode(response.body)["error"] ?? "Failed to fetch user"
+          "id": id,
+          "name": (rawUser['name'] ?? '').toString(),
+          "lastName": (rawUser['lastName'] ?? '').toString(),
+          "phone": (rawUser['phone'] ?? '').toString(),
+          "email": (rawUser['email'] ?? '').toString(),
+          "role": (rawUser['role'] ?? 'user').toString(),
         };
+      } else {
+        return {"error": data["error"] ?? data["message"] ?? "Failed to fetch user"};
       }
     } catch (e) {
       return {"error": "Failed to connect to server: $e"};
     }
   }
 
-  // ---------------- Update user ----------------
+  // ---------------- Update logged-in user ----------------
   static Future<Map<String, dynamic>> updateUser({
     required String name,
     required String lastName,
@@ -97,9 +126,8 @@ class ApiService {
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString("token");
-
-      if (token == null) return {"error": "No token found"};
+      final token = prefs.getString("jwt_token");
+      if (token == null || token.isEmpty) return {"error": "No token found"};
 
       final response = await http.put(
         Uri.parse("$baseUrl/users/me"),
@@ -115,12 +143,32 @@ class ApiService {
         }),
       );
 
+      final data = jsonDecode(response.body);
+
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      } else {
+        // server might return { user: {...} } or { updatedUser: {...} } or the user directly
+        Map<String, dynamic> updated;
+        if (data is Map && data['user'] is Map) {
+          updated = Map<String, dynamic>.from(data['user'] as Map);
+        } else if (data is Map && data['updatedUser'] is Map) {
+          updated = Map<String, dynamic>.from(data['updatedUser'] as Map);
+        } else if (data is Map && (data.containsKey('id') || data.containsKey('_id') || data.containsKey('name'))) {
+          updated = Map<String, dynamic>.from(data as Map);
+        } else {
+          return {"error": "Unexpected response shape from server"};
+        }
+
+        final id = (updated['_id'] ?? updated['id'] ?? '').toString();
         return {
-          "error": jsonDecode(response.body)["error"] ?? "Failed to update user"
+          "id": id,
+          "name": (updated['name'] ?? '').toString(),
+          "lastName": (updated['lastName'] ?? '').toString(),
+          "phone": (updated['phone'] ?? '').toString(),
+          "email": (updated['email'] ?? '').toString(),
+          "role": (updated['role'] ?? 'user').toString(),
         };
+      } else {
+        return {"error": data["error"] ?? data["message"] ?? "Failed to update user"};
       }
     } catch (e) {
       return {"error": "Failed to connect to server: $e"};
@@ -130,6 +178,8 @@ class ApiService {
   // ---------------- Logout user ----------------
   static Future<void> logoutUser() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove("token");
+    await prefs.remove("jwt_token");
+    await prefs.remove("user_role");
+    await prefs.remove("user_phone");
   }
 }

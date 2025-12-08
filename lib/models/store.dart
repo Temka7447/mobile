@@ -17,15 +17,15 @@ class Store {
 
   factory Store.fromJson(Map<String, dynamic> json) {
     return Store(
-      id: json['_id'] ?? '',
-      name: json['name'] ?? '',
-      phone: json['phone'] ?? '',
-      imagePath: json['imagePath'] ?? '',
-      products: json['products'] != null
-          ? (json['products'] as List)
-              .map((p) => Product.fromJson(p))
-              .toList()
-          : [],
+      id: json['_id']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      phone: json['phone']?.toString() ?? '',
+      imagePath: json['imagePath']?.toString() ?? '',
+      products: (json['products'] as List?)
+              ?.where((p) => p != null)
+              .map((p) => Product.fromJson(p as Map<String, dynamic>))
+              .toList() ??
+          [],
     );
   }
 }
