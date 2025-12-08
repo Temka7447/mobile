@@ -139,12 +139,12 @@ class _OrderPageState extends State<OrderPage> {
                         '$baseUrl/${store.imagePath}',
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => Image.asset(
-                          'assets/images/default.png',
+                          'images/scooter.png',
                           fit: BoxFit.cover,
                         ),
                       )
                     : Image.asset(
-                        'assets/images/default.png',
+                        'images/scooter.png',
                         fit: BoxFit.cover,
                       ),
               ),

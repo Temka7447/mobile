@@ -1,4 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import '../../models/store.dart';
+import 'edit_store.dart';
 
 class AdminHome extends StatefulWidget {
   const AdminHome({super.key});
@@ -8,192 +12,203 @@ class AdminHome extends StatefulWidget {
 }
 
 class _AdminHomeState extends State<AdminHome> {
+  List<Store> _stores = [];
+  bool _isLoading = true;
+  final String baseUrl = 'http://localhost:5000';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStores();
+  }
+
+  Future<void> _loadStores() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/shops'));
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonResult = json.decode(response.body);
+        setState(() {
+          _stores = jsonResult.map((e) => Store.fromJson(e)).toList();
+          _isLoading = false;
+        });
+      } else {
+        setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      print("ERROR LOADING SHOPS: $e");
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _deleteStore(String id) async {
+    try {
+      final response = await http.delete(Uri.parse('$baseUrl/shops/$id'));
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Дэлгүүр устгагдлаа!")),
+        );
+        _loadStores();
+      } else {
+        print("FAILED DELETE ${response.statusCode}");
+      }
+    } catch (e) {
+      print("DELETE ERROR: $e");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: SingleChildScrollView(
+      backgroundColor: const Color(0xfff7f3c9),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 30),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 20),
-
-              // Search Bar
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: SearchBar(
-                  hintText: "Дэлгүүр хайх",
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // Add Store Button → Right Side
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton.icon(
-                    onPressed: () {},
-                    style: TextButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 12, horizontal: 16),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30))),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Дэлгүүр нэмэх'),
-                  ),
-                  const SizedBox(width: 16),
-                ],
-              ),
-
+              const Text("Дэлгүүрүүд",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
-
-              // Store Card
               Container(
-                // width: 330,
-                margin: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(horizontal: 15),
                 decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 230, 230, 230),
-                  borderRadius: BorderRadius.circular(16),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(30),
                 ),
-                child: Column(
-                  children: [
-                    // Store Image Rounded
-                    ClipRRect(
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(16),
-                        topRight: Radius.circular(16),
-                      ),
-                      child: Image.asset(
-                        "images/scooter.png", // 👈 өөрийн зургаар солино
-                        height: 150,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        const Text(
-                          "Цэцгийн дэлгүүр",
-                          // style:
-                          //     TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-
-                        const SizedBox(height: 6),
-
-                        const Text(
-                          "16 төрлийн бараа",
-                          // style: TextStyle(color: Colors.black54),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        InkWell(
-                          onTap: () {},
-                          child: const Text(
-                            "Засах",
-                            style: TextStyle(
-                                fontSize: 16, color: Colors.lightBlue),
-                          ),
-                        ),
-                        InkWell(
-                          onTap: () {},
-                          child: const Text(
-                            "Устгах",
-                            style: TextStyle(fontSize: 16, color: Colors.red),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 14),
-                  ],
+                child: const TextField(
+                  decoration: InputDecoration(
+                    hintText: "Хайх...",
+                    border: InputBorder.none,
+                    suffixIcon: Icon(Icons.search),
+                  ),
                 ),
               ),
+              const SizedBox(height: 20),
 
-              Container(
-                // width: 330,
-                margin: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 230, 230, 230),
-                  borderRadius: BorderRadius.circular(16),
+              // ADD BUTTON
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const EditStorePage()),
+                  ).then((_) => _loadStores());
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                      vertical: 12, horizontal: 40),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(360)),
                 ),
-                child: Column(
-                  children: [
-                    // Store Image Rounded
-                    ClipRRect(
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(16),
-                        topRight: Radius.circular(16),
+                icon: const Icon(Icons.add),
+                label: const Text('Дэлгүүр нэмэх'),
+              ),
+
+              const SizedBox(height: 20),
+              Expanded(
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : ListView.separated(
+                        itemCount: _stores.length,
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(height: 20),
+                        itemBuilder: (context, index) =>
+                            storeCard(_stores[index]),
                       ),
-                      child: Image.asset(
-                        "images/scooter.png", // 👈 өөрийн зургаар солино
-                        height: 150,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        const Text(
-                          "Цэцгийн дэлгүүр",
-                          // style:
-                          //     TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-
-                        const SizedBox(height: 6),
-
-                        const Text(
-                          "16 төрлийн бараа",
-                          // style: TextStyle(color: Colors.black54),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        InkWell(
-                          onTap: () {},
-                          child: const Text(
-                            "Засах",
-                            style: TextStyle(
-                                fontSize: 16, color: Colors.lightBlue),
-                          ),
-                        ),
-                        InkWell(
-                          onTap: () {},
-                          child: const Text(
-                            "Устгах",
-                            style: TextStyle(fontSize: 16, color: Colors.red),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 14),
-                  ],
-                ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget storeCard(Store store) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+              blurRadius: 8,
+              offset: const Offset(2, 4),
+              color: Colors.black.withOpacity(0.15))
+        ],
+      ),
+      child: Column(
+        children: [
+          ClipRRect(
+            borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(22)),
+            child: SizedBox(
+              height: 140,
+              width: double.infinity,
+              child: store.imagePath.isNotEmpty
+                  ? Image.network(
+                      store.imagePath,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          Image.asset('images/scooter.png', fit: BoxFit.cover),
+                    )
+                  : Image.asset('images/scooter.png', fit: BoxFit.cover),
+            ),
+          ),
+
+          // Name + Phone
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(store.name,
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w600)),
+                ),
+                Text("утас ${store.phone}",
+                    style: const TextStyle(fontSize: 14)),
+              ],
+            ),
+          ),
+
+          // EDIT + DELETE BUTTONS
+          Padding(
+            padding: const EdgeInsets.only(left: 12, right: 12, bottom: 15),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => EditStorePage(store: store),
+                      ),
+                    ).then((_) => _loadStores());
+                  },
+                  child: const Text(
+                    "Засах",
+                    style: TextStyle(
+                        color: Colors.blue,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => _deleteStore(store.id),
+                  child: const Text(
+                    "Устгах",
+                    style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14),
+                  ),
+                ),
+              ],
+            ),
+          )
+        ],
       ),
     );
   }
