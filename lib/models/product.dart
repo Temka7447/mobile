@@ -1,32 +1,25 @@
 class Product {
+  final String id;
   final String name;
   final int price;
   final String imagePath;
   final int quantity;
-  final String? shopName;
 
   Product({
+    required this.id,
     required this.name,
     required this.price,
     required this.imagePath,
     required this.quantity,
-    this.shopName,
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
+      id: json['_id'] ?? '',
       name: json['name'] ?? '',
-      price: json['price'] ?? 0,
-      imagePath: json['imagePath'] != null
-          ? json['imagePath'].toString()
-          : '', // if your server returns local path, we will prepend base URL later
-      quantity: json['quantity'] ?? 0,
-      shopName: json['shopName'],
+      price: json['price'] != null ? json['price'] as int : 0,
+      imagePath: json['imagePath'] ?? 'images/default.png',
+      quantity: json['quantity'] != null ? json['quantity'] as int : 0,
     );
-  }
-
-  String get fullImagePath {
-    if (imagePath.startsWith('http')) return imagePath;
-    return 'http://localhost:5000/$imagePath'; // prepend backend URL
   }
 }

@@ -1,61 +1,13 @@
 import 'package:flutter/material.dart';
-import 'items.dart';
-import 'users.dart';
 
-class AdminHome extends StatefulWidget {
-  const AdminHome({super.key});
+class Users extends StatefulWidget {
+  const Users({super.key});
 
   @override
-  State<AdminHome> createState() => _AdminHomeState();
+  State<Users> createState() => _UsersState();
 }
 
-class _AdminHomeState extends State<AdminHome> {
-
-  int currentIndex = 0;
-
-  final List<Widget> pages = [
-    const AdminHomeContent(),  // ← тусад нь хадгалав
-    const Items(),
-    const Users(),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: pages[currentIndex],
-
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: currentIndex,
-        selectedItemColor: Colors.orange,
-        unselectedItemColor: Colors.black,
-        onTap: (index) {
-          setState(() {
-            currentIndex = index;
-          });
-        },
-        items: const [
-          BottomNavigationBarItem(
-              icon: Icon(Icons.home),
-              label: 'home'
-          ),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.add),
-              label: 'items'
-          ),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.table_rows_rounded),
-              label: 'users'
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// 📌 Home Tab UI-г тусад нь салгав
-class AdminHomeContent extends StatelessWidget {
-  const AdminHomeContent({super.key});
-
+class _UsersState extends State<Users> {
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -95,16 +47,15 @@ class AdminHomeContent extends StatelessWidget {
 
             const SizedBox(height: 10),
 
-            _storeCard(),
-            _storeCard(),
+            _itemCard(),
+            _itemCard(),
           ],
         ),
       ),
     );
   }
 
-  // 📌 Дэлгүүрийг компонент болгож салгасан
-  Widget _storeCard() {
+  Widget _itemCard(){
     return Container(
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(

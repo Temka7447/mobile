@@ -26,6 +26,7 @@ class DetailPage extends StatefulWidget {
 }
 
 class _DetailPageState extends State<DetailPage> {
+  final String baseUrl = 'http://localhost:5000';
   late List<Product> _products = [];
   final Map<int, int> _selected = {};
   bool _loading = true;
@@ -51,12 +52,10 @@ class _DetailPageState extends State<DetailPage> {
       _loading = false;
     }
   }
-  final String baseUrl = 'http://localhost:5000';
-
 
   Future<void> _fetchProducts(String shopId) async {
     try {
-      final url = '$baseUrl/shops/$shopId/products'; // use baseUrl
+      final url = '$baseUrl/shops/$shopId/products';
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final List data = jsonDecode(response.body);
@@ -65,11 +64,12 @@ class _DetailPageState extends State<DetailPage> {
           _loading = false;
         });
       } else {
-        throw Exception('Failed to load products');
+        throw Exception('Failed to load products: ${response.statusCode}');
       }
     } catch (e) {
       setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error fetching products: $e')));
     }
   }
 
@@ -162,7 +162,9 @@ class _DetailPageState extends State<DetailPage> {
                                 child: ClipRRect(
                                   borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
                                   child: Image.network(
-                                    p.imagePath,
+                                    p.imagePath.startsWith('http')
+                                        ? p.imagePath
+                                        : '$baseUrl/${p.imagePath}',
                                     fit: BoxFit.cover,
                                     errorBuilder: (c, e, s) =>
                                         Container(color: Colors.grey.shade200),

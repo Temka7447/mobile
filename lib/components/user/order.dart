@@ -108,7 +108,7 @@ class _OrderPageState extends State<OrderPage> {
               kind: DetailKind.store,
               title: store.name,
               imagePath: store.imagePath,
-              // products: store.products,
+              shopId: store.id,
             ),
           ),
         );
@@ -135,16 +135,15 @@ class _OrderPageState extends State<OrderPage> {
                 width: double.infinity,
                 child: store.imagePath.isNotEmpty
                     ? Image.network(
-                        // Make sure your backend serves images as static files
                         '$baseUrl/${store.imagePath}',
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => Image.asset(
-                          'assets/images/default.png',
+                          'images/scooter.png',
                           fit: BoxFit.cover,
                         ),
                       )
                     : Image.asset(
-                        'assets/images/default.png',
+                        'images/default.png',
                         fit: BoxFit.cover,
                       ),
               ),
