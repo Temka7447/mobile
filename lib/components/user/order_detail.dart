@@ -68,28 +68,79 @@ class _DetailPageState extends State<DetailPage> {
       }
     } catch (e) {
       setState(() => _loading = false);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error fetching products: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Бүтээгдэхүүн авахад алдаа гарлаа: $e'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
     }
   }
 
   void _increment(int index) {
-    setState(() {
-      final selectedQty = _selected[index] ?? 0;
-      if (selectedQty < _products[index].quantity) {
+    final selectedQty = _selected[index] ?? 0;
+    final availableQty = _products[index].quantity;
+
+    if (selectedQty < availableQty) {
+      setState(() {
         _selected[index] = selectedQty + 1;
-      }
-    });
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Үлдэгдэл хүрэлцэхгүй'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 1),
+        ),
+      );
+    }
   }
 
   void _decrement(int index) {
-    setState(() {
-      final selectedQty = _selected[index] ?? 0;
-      if (selectedQty > 0) {
+    final selectedQty = _selected[index] ?? 0;
+    if (selectedQty > 0) {
+      setState(() {
         _selected[index] = selectedQty - 1;
         if (_selected[index] == 0) _selected.remove(index);
-      }
-    });
+      });
+    }
+  }
+
+  Widget _buildProductImage(Product p) {
+    if (p.imagePath.isNotEmpty) {
+      final imageUrl =
+          p.imagePath.startsWith('http') ? p.imagePath : '$baseUrl/${p.imagePath}';
+      return Image.network(
+        imageUrl,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return Container(
+            color: Colors.grey.shade200,
+            child: const Center(child: CircularProgressIndicator()),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            color: Colors.grey.shade200,
+            child: const Icon(Icons.image_not_supported, size: 40),
+          );
+        },
+      );
+    } else {
+      return Container(
+        color: Colors.grey.shade200,
+        child: const Icon(Icons.image_not_supported, size: 40),
+      );
+    }
+  }
+
+  Widget _buildShopImage() {
+    if (widget.imageWidget != null) return widget.imageWidget!;
+    if (widget.imagePath != null && widget.imagePath!.isNotEmpty) {
+      return Image.asset(widget.imagePath!, height: 160, fit: BoxFit.cover);
+    }
+    return const SizedBox.shrink();
   }
 
   @override
@@ -109,7 +160,7 @@ class _DetailPageState extends State<DetailPage> {
         backgroundColor: isOrder ? Colors.orange : Colors.deepPurple,
       ),
       body: _products.isEmpty
-          ? const Center(child: Text("No products available"))
+          ? const Center(child: Text("Бүтээгдэхүүн байхгүй байна"))
           : Column(
               children: [
                 if (widget.imageWidget != null || widget.imagePath != null)
@@ -117,11 +168,7 @@ class _DetailPageState extends State<DetailPage> {
                     padding: const EdgeInsets.all(12),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(18),
-                      child: widget.imageWidget ??
-                          (widget.imagePath != null
-                              ? Image.asset(widget.imagePath!,
-                                  height: 160, fit: BoxFit.cover)
-                              : const SizedBox.shrink()),
+                      child: _buildShopImage(),
                     ),
                   ),
                 Expanded(
@@ -160,15 +207,9 @@ class _DetailPageState extends State<DetailPage> {
                               Expanded(
                                 flex: 5,
                                 child: ClipRRect(
-                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                                  child: Image.network(
-                                    p.imagePath.startsWith('http')
-                                        ? p.imagePath
-                                        : '$baseUrl/${p.imagePath}',
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (c, e, s) =>
-                                        Container(color: Colors.grey.shade200),
-                                  ),
+                                  borderRadius: const BorderRadius.vertical(
+                                      top: Radius.circular(12)),
+                                  child: _buildProductImage(p),
                                 ),
                               ),
                               Padding(
@@ -184,7 +225,8 @@ class _DetailPageState extends State<DetailPage> {
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 8),
                                 child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     RichText(
                                       text: TextSpan(
@@ -194,7 +236,9 @@ class _DetailPageState extends State<DetailPage> {
                                             style: TextStyle(
                                               fontSize: 13,
                                               fontWeight: FontWeight.bold,
-                                              color: selected ? Colors.orange : Colors.black87,
+                                              color: selected
+                                                  ? Colors.orange
+                                                  : Colors.black87,
                                             ),
                                           ),
                                           if (selected)
@@ -215,23 +259,27 @@ class _DetailPageState extends State<DetailPage> {
                               ),
                               if (selected)
                                 Padding(
-                                  padding:
-                                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
                                   child: SizedBox(
                                     height: 40,
                                     child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         IconButton(
                                           onPressed: () => _decrement(idx),
-                                          icon: const Icon(Icons.remove_circle_outline,
+                                          icon: const Icon(
+                                              Icons.remove_circle_outline,
                                               color: Colors.redAccent),
                                         ),
                                         Text('$qty',
-                                            style: const TextStyle(fontWeight: FontWeight.bold)),
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.bold)),
                                         IconButton(
                                           onPressed: () => _increment(idx),
-                                          icon: const Icon(Icons.add_circle_outline,
+                                          icon: const Icon(
+                                              Icons.add_circle_outline,
                                               color: Colors.green),
                                         ),
                                       ],
@@ -276,7 +324,9 @@ class _DetailPageState extends State<DetailPage> {
               onPressed: _total > 0
                   ? () {
                       ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Proceeding with total $_total мт')));
+                          SnackBar(
+                              content: Text('Нийт $_total мт-оор захиалах')),
+                      );
                     }
                   : null,
               icon: const Icon(Icons.arrow_forward_ios),

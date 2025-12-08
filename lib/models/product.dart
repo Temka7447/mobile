@@ -17,9 +17,9 @@ class Product {
     return Product(
       id: json['_id'] ?? '',
       name: json['name'] ?? '',
-      price: json['price'] != null ? json['price'] as int : 0,
-      imagePath: json['imagePath'] ?? 'images/default.png',
-      quantity: json['quantity'] != null ? json['quantity'] as int : 0,
+      price: json['price'] ?? 0,
+      imagePath: json['imagePath'] ?? '',
+      quantity: json['quantity'] ?? 0,
     );
   }
 }

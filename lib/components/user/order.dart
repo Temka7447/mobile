@@ -13,7 +13,12 @@ class OrderPage extends StatefulWidget {
 
 class _OrderPageState extends State<OrderPage> {
   List<Store> _stores = [];
-  bool _isLoading = true;
+  bool _isLoading = false;
+  bool _hasMore = true; // To check if more pages are available
+  int _page = 0;
+  final int _limit = 10;
+
+  final String baseUrl = 'http://localhost:5000';
 
   @override
   void initState() {
@@ -21,18 +26,30 @@ class _OrderPageState extends State<OrderPage> {
     _loadStores();
   }
 
-  final String baseUrl = 'http://localhost:5000';
+  Future<void> _loadStores({bool loadMore = false}) async {
+    if (_isLoading) return;
 
-  Future<void> _loadStores() async {
+    setState(() => _isLoading = true);
+    if (!loadMore) _page = 0;
+
     try {
-      final response = await http.get(Uri.parse('$baseUrl/shops'));
+      final response = await http.get(
+        Uri.parse('$baseUrl/shops?page=$_page&limit=$_limit'),
+      );
 
       if (response.statusCode == 200) {
         final List<dynamic> jsonResult = json.decode(response.body);
         setState(() {
-          _stores = jsonResult.map((e) => Store.fromJson(e)).toList();
+          if (loadMore) {
+            _stores.addAll(jsonResult.map((e) => Store.fromJson(e)).toList());
+          } else {
+            _stores = jsonResult.map((e) => Store.fromJson(e)).toList();
+          }
+
+          _hasMore = jsonResult.length == _limit; // if less than limit, no more pages
           _isLoading = false;
         });
+        _page++; // Increment page for next fetch
       } else {
         print('Failed to fetch stores. Status: ${response.statusCode}');
         setState(() => _isLoading = false);
@@ -61,8 +78,10 @@ class _OrderPageState extends State<OrderPage> {
                 ],
               ),
               const SizedBox(height: 20),
-              const Text("Дэлгүүрүүд",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const Text(
+                "Дэлгүүрүүд",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 10),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 15),
@@ -80,16 +99,37 @@ class _OrderPageState extends State<OrderPage> {
               ),
               const SizedBox(height: 20),
               Expanded(
-                child: _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : ListView.separated(
-                        itemCount: _stores.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 20),
-                        itemBuilder: (context, index) {
-                          final store = _stores[index];
-                          return storeCard(context: context, store: store);
-                        },
-                      ),
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: (scrollInfo) {
+                    if (!_isLoading &&
+                        _hasMore &&
+                        scrollInfo.metrics.pixels ==
+                            scrollInfo.metrics.maxScrollExtent) {
+                      _loadStores(loadMore: true);
+                    }
+                    return false;
+                  },
+                  child: _stores.isEmpty && _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : ListView.separated(
+                          itemCount: _stores.length + (_hasMore ? 1 : 0),
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 20),
+                          itemBuilder: (context, index) {
+                            if (index < _stores.length) {
+                              final store = _stores[index];
+                              return storeCard(context: context, store: store);
+                            } else {
+                              // Show loading indicator at the bottom
+                              return const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 20),
+                                child: Center(
+                                    child: CircularProgressIndicator()),
+                              );
+                            }
+                          },
+                        ),
+                ),
               ),
             ],
           ),
@@ -98,6 +138,7 @@ class _OrderPageState extends State<OrderPage> {
     );
   }
 
+  // ================== Store Card ==================
   Widget storeCard({required BuildContext context, required Store store}) {
     return InkWell(
       borderRadius: BorderRadius.circular(22),
@@ -133,19 +174,7 @@ class _OrderPageState extends State<OrderPage> {
               child: SizedBox(
                 height: 140,
                 width: double.infinity,
-                child: store.imagePath.isNotEmpty
-                    ? Image.network(
-                        '$baseUrl/${store.imagePath}',
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Image.asset(
-                          'images/scooter.png',
-                          fit: BoxFit.cover,
-                        ),
-                      )
-                    : Image.asset(
-                        'images/default.png',
-                        fit: BoxFit.cover,
-                      ),
+                child: _buildStoreImage(store),
               ),
             ),
             Padding(
@@ -154,12 +183,16 @@ class _OrderPageState extends State<OrderPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
-                    child: Text(store.name,
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w600)),
+                    child: Text(
+                      store.name,
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w600),
+                    ),
                   ),
-                  Text("утас ${store.phone}",
-                      style: const TextStyle(fontSize: 14)),
+                  Text(
+                    "утас ${store.phone}",
+                    style: const TextStyle(fontSize: 14),
+                  ),
                 ],
               ),
             )
@@ -167,5 +200,33 @@ class _OrderPageState extends State<OrderPage> {
         ),
       ),
     );
+  }
+
+  // ================== Image Handling ==================
+  Widget _buildStoreImage(Store store) {
+    if (store.imagePath != null && store.imagePath.isNotEmpty) {
+      final imageUrl = store.imagePath.startsWith('http')
+          ? store.imagePath
+          : '$baseUrl/${store.imagePath}';
+      return Image.network(
+        imageUrl,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return const Center(child: CircularProgressIndicator());
+        },
+        errorBuilder: (context, error, stackTrace) {
+          return Image.asset(
+            'images/default.png',
+            fit: BoxFit.cover,
+          );
+        },
+      );
+    } else {
+      return Image.asset(
+        'images/default.png',
+        fit: BoxFit.cover,
+      );
+    }
   }
 }
