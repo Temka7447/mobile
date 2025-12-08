@@ -33,7 +33,7 @@ class MyApp extends StatelessWidget {
         '/admin_home': (context) => const AdminHome(),
         '/order': (context) => const OrderPage(),
         '/users': (context) => const Users(),
-        '/items': (context) => const Items()
+        // '/items': (context) => const Items()
       },
     );
   }

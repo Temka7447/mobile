@@ -27,7 +27,7 @@ class DetailPage extends StatefulWidget {
 
 class _DetailPageState extends State<DetailPage> {
   final String baseUrl = 'http://localhost:5000';
-  late List<Product> _products = [];
+  List<Product> _products = [];
   final Map<int, int> _selected = {};
   bool _loading = true;
 
@@ -57,8 +57,10 @@ class _DetailPageState extends State<DetailPage> {
     try {
       final url = '$baseUrl/shops/$shopId/products';
       final response = await http.get(Uri.parse(url));
+
       if (response.statusCode == 200) {
         final List data = jsonDecode(response.body);
+        if (!mounted) return;
         setState(() {
           _products = data.map((item) => Product.fromJson(item)).toList();
           _loading = false;
@@ -67,6 +69,7 @@ class _DetailPageState extends State<DetailPage> {
         throw Exception('Failed to load products: ${response.statusCode}');
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() => _loading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -82,10 +85,12 @@ class _DetailPageState extends State<DetailPage> {
     final availableQty = _products[index].quantity;
 
     if (selectedQty < availableQty) {
+      if (!mounted) return;
       setState(() {
         _selected[index] = selectedQty + 1;
       });
     } else {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Үлдэгдэл хүрэлцэхгүй'),
@@ -99,6 +104,7 @@ class _DetailPageState extends State<DetailPage> {
   void _decrement(int index) {
     final selectedQty = _selected[index] ?? 0;
     if (selectedQty > 0) {
+      if (!mounted) return;
       setState(() {
         _selected[index] = selectedQty - 1;
         if (_selected[index] == 0) _selected.remove(index);
@@ -113,26 +119,16 @@ class _DetailPageState extends State<DetailPage> {
       return Image.network(
         imageUrl,
         fit: BoxFit.cover,
-        loadingBuilder: (context, child, progress) {
-          if (progress == null) return child;
-          return Container(
-            color: Colors.grey.shade200,
-            child: const Center(child: CircularProgressIndicator()),
-          );
-        },
-        errorBuilder: (context, error, stackTrace) {
-          return Container(
-            color: Colors.grey.shade200,
-            child: const Icon(Icons.image_not_supported, size: 40),
-          );
-        },
-      );
-    } else {
-      return Container(
-        color: Colors.grey.shade200,
-        child: const Icon(Icons.image_not_supported, size: 40),
+        loadingBuilder: (context, child, progress) =>
+            progress == null ? child : const Center(child: CircularProgressIndicator()),
+        errorBuilder: (context, error, stackTrace) =>
+            Container(color: Colors.grey.shade200, child: const Icon(Icons.image_not_supported, size: 40)),
       );
     }
+    return Container(
+      color: Colors.grey.shade200,
+      child: const Icon(Icons.image_not_supported, size: 40),
+    );
   }
 
   Widget _buildShopImage() {
@@ -323,10 +319,10 @@ class _DetailPageState extends State<DetailPage> {
             IconButton(
               onPressed: _total > 0
                   ? () {
+                      if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                              content: Text('Нийт $_total мт-оор захиалах')),
-                      );
+                              content: Text('Нийт $_total мт-оор захиалах')));
                     }
                   : null,
               icon: const Icon(Icons.arrow_forward_ios),
